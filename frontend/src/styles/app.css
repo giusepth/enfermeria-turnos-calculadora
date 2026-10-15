@@ -1,0 +1,633 @@
+@import "tailwindcss";
+
+/*
+ * R4/F3 (design/plan.md §10): escaneo explícito de las vistas para que las
+ * utilidades usadas en los templates (p. ej. `xl:col-span-*`) se generen.
+ * No sustituye la detección automática de Tailwind v4, la refuerza.
+ */
+@source "../views";
+
+/*
+ * ADR-F12-002 · catálogo normativo de tokens (tema oscuro único, RF-V01..V04).
+ * Todo color de la aplicación sale de aquí (RF-V09): sin hex sueltos en clases.
+ */
+@theme {
+  --color-fondo: #0A0E15;
+  --color-superficie-1: #141C27;
+  --color-superficie-2: #1D2734;
+  --color-texto: #F1F5F9;
+  --color-texto-secundario: #A8B5C4;
+  --color-acento: #7AA5FF;
+  --color-tinta: #0B1220;
+  --color-borde: #6B7889;
+  --color-error: #FF8A80;
+  --color-exito: #5FD99B;
+
+  --radius-card: 16px;
+  --radius-control: 10px;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-fondo text-texto;
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    letter-spacing: -0.006em;
+    /* Texto largo (usuarios, fechas ISO) sin romper la rejilla (spec §6). */
+    overflow-wrap: anywhere;
+    /* Superficies del navegador derivadas de la paleta (craft-floor). */
+    accent-color: var(--color-acento);
+    caret-color: var(--color-acento);
+    background-image:
+      radial-gradient(
+        42rem 30rem at 8% -12%,
+        color-mix(in oklab, var(--color-acento) 12%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        48rem 34rem at 100% 0%,
+        color-mix(in oklab, var(--color-superficie-2) 80%, transparent),
+        transparent 68%
+      );
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: var(--color-texto);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 650;
+    text-wrap: balance;
+  }
+
+  h1 {
+    font-size: clamp(1.15rem, 1.8vw, 1.35rem);
+    margin: 0;
+  }
+
+  h2 {
+    font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+    margin: 0;
+  }
+
+  h3 {
+    font-size: 1rem;
+    margin: 0 0 0.25rem;
+  }
+
+  p {
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  a {
+    color: var(--color-acento);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+
+  /* RNF-V02: foco visible con el acento; nunca se anula sin sustituto. */
+  :focus-visible {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-acento) 30%, transparent);
+    color: var(--color-texto);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--color-borde) 50%, transparent) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--color-borde) 50%, transparent);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--color-borde) 70%, transparent);
+    background-clip: padding-box;
+  }
+}
+
+@keyframes app-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@layer components {
+  /* ---------- Marco de la app ---------- */
+  .app-frame {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: color-mix(in oklab, var(--color-fondo) 76%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid color-mix(in oklab, var(--color-borde) 16%, transparent);
+  }
+
+  .app-bar-inner {
+    max-width: 72rem;
+    margin-inline: auto;
+    padding: 0.8125rem clamp(1.25rem, 2vw, 2rem);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .app-shell {
+    max-width: 72rem;
+    width: 100%;
+    margin-inline: auto;
+    padding: clamp(1.5rem, 3vw, 2.5rem) clamp(1.25rem, 2vw, 2rem) 3.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1.25rem, 2.5vw, 2rem);
+  }
+
+  /* Momento único de entrada de la app (craft-floor: una sola animación base). */
+  @media (prefers-reduced-motion: no-preference) {
+    .app-shell {
+      animation: app-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .brand-mark {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex: none;
+    border-radius: 8px;
+    background-image: linear-gradient(
+      140deg,
+      var(--color-acento),
+      color-mix(in oklab, var(--color-acento) 40%, var(--color-tinta))
+    );
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, white 20%, transparent),
+      0 6px 18px -8px color-mix(in oklab, var(--color-acento) 70%, transparent);
+  }
+
+  .brand-name {
+    font-weight: 650;
+  }
+
+  .app-tagline {
+    color: var(--color-texto-secundario);
+    font-size: 0.8125rem;
+  }
+
+  /* ---------- Iconografía ---------- */
+  .icon {
+    display: block;
+    flex: none;
+  }
+
+  /* ---------- Rejilla Bento ---------- */
+  .bento-grid {
+    display: grid;
+    gap: clamp(0.875rem, 2vw, 1.25rem);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (min-width: 768px) {
+    .bento-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .bento-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+  }
+
+  /* ---------- Tarjetas ---------- */
+  .card {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background-color: var(--color-superficie-1);
+    border: 1px solid color-mix(in oklab, var(--color-borde) 24%, transparent);
+    border-radius: var(--radius-card);
+    padding: clamp(1.125rem, 2vw, 1.5rem);
+    box-shadow:
+      0 1px 0 0 color-mix(in oklab, white 3%, transparent),
+      0 20px 44px -30px rgba(2, 6, 23, 0.9);
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .card:hover {
+    border-color: color-mix(in oklab, var(--color-borde) 40%, transparent);
+    box-shadow:
+      0 1px 0 0 color-mix(in oklab, white 4%, transparent),
+      0 28px 54px -30px rgba(2, 6, 23, 0.95);
+    transform: translateY(-2px);
+  }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .card-heading {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  .card-head > .btn:last-child {
+    margin-left: auto;
+  }
+
+  .card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: none;
+    border-radius: 11px;
+    color: var(--color-acento);
+    background-color: color-mix(in oklab, var(--color-acento) 14%, var(--color-superficie-2));
+    border: 1px solid color-mix(in oklab, var(--color-acento) 24%, transparent);
+  }
+
+  .card-icon .icon {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  .card-title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-texto);
+  }
+
+  .card-desc {
+    margin-top: 0.1875rem;
+    color: var(--color-texto-secundario);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  /* ---------- Secciones y paneles ---------- */
+  .consulta,
+  .calendario {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .section-heading {
+    min-width: 0;
+  }
+
+  /* Cabecera del panel redundante cuando la tarjeta del home ya la aporta. */
+  .card .consulta > .section-head,
+  .card .calendario > .section-head {
+    display: none;
+  }
+
+  /* Aparición de un panel al abrirlo (transición, no carga inicial). */
+  @media (prefers-reduced-motion: no-preference) {
+    [id$="-panel"] > section {
+      animation: panel-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  .consulta-hint,
+  .calendario-hint {
+    color: var(--color-texto-secundario);
+  }
+
+  .consulta-hint,
+  .calendario-hint {
+    font-size: 0.8125rem;
+    margin-top: 0.1875rem;
+  }
+
+  /* ---------- Botones ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-width: 24px;
+    min-height: 40px;
+    padding: 0.5625rem 1.125rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    background-color: transparent;
+    color: var(--color-texto);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.875rem;
+    letter-spacing: -0.005em;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease,
+      transform 0.1s ease;
+  }
+
+  .btn .icon {
+    width: 1.0625rem;
+    height: 1.0625rem;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background-color: var(--color-acento);
+    border-color: var(--color-acento);
+    color: var(--color-tinta);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: color-mix(in oklab, var(--color-acento) 86%, white);
+    border-color: color-mix(in oklab, var(--color-acento) 86%, white);
+    box-shadow: 0 10px 24px -12px color-mix(in oklab, var(--color-acento) 80%, transparent);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    background-color: color-mix(in oklab, var(--color-acento) 90%, black);
+    border-color: color-mix(in oklab, var(--color-acento) 90%, black);
+  }
+
+  .btn-ghost {
+    background-color: transparent;
+    border-color: color-mix(in oklab, var(--color-borde) 40%, transparent);
+    color: var(--color-texto);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--color-superficie-2);
+    border-color: color-mix(in oklab, var(--color-borde) 70%, transparent);
+  }
+
+  /* RNF-V06: todo objetivo interactivo declara un mínimo de 24×24 px. */
+  a {
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  /* ---------- Campos de formulario ---------- */
+  label {
+    color: var(--color-texto);
+    font-weight: 500;
+    font-size: 0.8125rem;
+  }
+
+  input,
+  select {
+    min-width: 24px;
+    min-height: 40px;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--color-superficie-2);
+    border: 1px solid color-mix(in oklab, var(--color-borde) 38%, transparent);
+    border-radius: var(--radius-control);
+    color: var(--color-texto);
+    font: inherit;
+    font-size: 0.875rem;
+    transition:
+      border-color 0.18s ease,
+      background-color 0.18s ease;
+  }
+
+  input:hover,
+  select:hover {
+    border-color: color-mix(in oklab, var(--color-borde) 60%, transparent);
+  }
+
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+    border-color: var(--color-acento);
+  }
+
+  input::placeholder {
+    color: var(--color-texto-secundario);
+    opacity: 0.7;
+  }
+
+  /* ---------- Formularios: barras de herramientas ---------- */
+  .consulta-form,
+  .calendario-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.75rem 1rem;
+  }
+
+  .consulta-form label,
+  .calendario-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .consulta-horario {
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  /* Distintivo de proyección teórica (RN-15): informativo, no es un estado. */
+  .consulta-proyeccion,
+  .calendario-proyeccion {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid color-mix(in oklab, var(--color-borde) 35%, transparent);
+    border-radius: 999px;
+    color: var(--color-texto-secundario);
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Estados (ADR-F12-005) ---------- */
+  .error,
+  .consulta-error,
+  .calendario-error {
+    padding: 0.625rem 0.875rem;
+    background-color: color-mix(in oklab, var(--color-superficie-2) 86%, var(--color-error));
+    border: 1px solid color-mix(in oklab, var(--color-error) 40%, transparent);
+    border-radius: var(--radius-control);
+    color: var(--color-error);
+    font-size: 0.875rem;
+  }
+
+  .consulta-resultado {
+    padding: 0.875rem 1rem;
+    background-color: color-mix(in oklab, var(--color-superficie-2) 92%, var(--color-exito));
+    border: 1px solid color-mix(in oklab, var(--color-exito) 30%, transparent);
+    border-radius: var(--radius-control);
+    color: var(--color-texto);
+    font-size: 0.875rem;
+  }
+
+  .consulta-resultado h3 {
+    color: var(--color-exito);
+  }
+
+  /* Estado informativo (RN-13: sin información suficiente), no es error ni éxito. */
+  .consulta-sin-informacion {
+    padding: 0.875rem 1rem;
+    background-color: var(--color-superficie-2);
+    border: 1px solid color-mix(in oklab, var(--color-borde) 30%, transparent);
+    border-radius: var(--radius-control);
+    color: var(--color-texto-secundario);
+    font-size: 0.875rem;
+  }
+
+  /* ---------- Tablas (ADR-F12-006) ---------- */
+  .table-scroll {
+    overflow-x: auto;
+    max-width: 100%;
+    border: 1px solid color-mix(in oklab, var(--color-borde) 20%, transparent);
+    border-radius: var(--radius-control);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th,
+  td {
+    padding: 0.5625rem 0.875rem;
+    text-align: left;
+    border-bottom: 1px solid color-mix(in oklab, var(--color-borde) 16%, transparent);
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--color-superficie-1);
+    color: var(--color-texto-secundario);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background-color: color-mix(in oklab, var(--color-superficie-2) 60%, transparent);
+  }
+}
+
+/*
+ * F13 · SPA de estimación de turnos (ADR-F13-010/ADR-F13-004): elementos nuevos
+ * del flujo referencia → menú → fecha | mes. Solo se añaden reglas con los
+ * tokens existentes; los valores del tema F12 no cambian (SC-F13-007).
+ */
+@layer components {
+  /* Advertencia estática de proyección teórica (RN-10+RN-15). */
+  .aviso-proyeccion {
+    padding: 0.5rem 0.875rem;
+    background-color: var(--color-superficie-2);
+    border: 1px solid color-mix(in oklab, var(--color-borde) 30%, transparent);
+    border-radius: var(--radius-control);
+    color: var(--color-texto-secundario);
+    font-size: 0.8125rem;
+    text-align: center;
+  }
+
+  /* Menú de opciones (a)/(b) y barra de navegación entre pantallas. */
+  .menu-opciones,
+  .pantalla-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+  }
+}
